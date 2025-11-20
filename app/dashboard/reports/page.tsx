@@ -20,7 +20,7 @@ export default function ReportsPage() {
   // Calculate metrics with safety checks
   const totalProducts = products.length
   const totalOrders = orders.length
-  const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0)
+  const totalRevenue = orders.filter(order => order.status === "completed").reduce((sum, order) => sum + (order.totalAmount || 0), 0)
   const lowStockProducts = products.filter((p) => (p.stock || 0) <= (p.minStock || 0)).length
 
   const inventoryValue = products.reduce((sum, p) => sum + (p.sellingPrice || 0) * (p.stock || 0), 0)

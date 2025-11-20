@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Package,
   AlertTriangle,
@@ -14,6 +15,7 @@ import {
   Scan,
   TrendingUp,
   TrendingDown,
+  ChevronDown,
 } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { useInventory } from "@/hooks/use-inventory"
@@ -39,16 +41,29 @@ const categoryData = [
 ]
 
 export default function DashboardPage() {
-  const { products } = useInventory()
+  const { products, orders } = useInventory()
   const { hasPermission } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [isScannerOpen, setIsScannerOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<string>("all")
 
   const totalProducts = products.length
   const lowStockItems = products.filter((p) => p.stock <= p.minStock).length
   const totalValue = products.reduce((sum, p) => sum + p.sellingPrice * p.stock, 0)
-  const totalOrders = 156 // Mock data
+  const totalOrders = orders.length
+  const totalRevenue = orders.filter(order => order.status === "completed").reduce((sum, order) => sum + order.totalAmount, 0)
+  
+  // Calculate inventory value for selected product
+  const getInventoryValue = () => {
+    if (selectedProduct === "all") {
+      return totalValue
+    }
+    const product = products.find(p => p.id === selectedProduct)
+    return product ? product.sellingPrice * product.stock : 0
+  }
+  
+  const currentInventoryValue = getInventoryValue()
 
   const recentActivity = [
     { id: 1, action: "Stock Added", product: "iPhone 14", quantity: 50, user: "John Doe", time: "2 hours ago" },
@@ -127,7 +142,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
@@ -169,16 +184,53 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-lg sm:text-xl lg:text-2xl font-bold break-all">
-              ₹{totalValue.toLocaleString("en-IN")}
+              ₹{totalRevenue.toLocaleString("en-IN")}
             </div>
             <p className="text-xs text-muted-foreground">
-              <TrendingDown className="h-3 w-3 inline mr-1" />
-              -2% from last month
+              <TrendingUp className="h-3 w-3 inline mr-1" />
+              +15% from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3">
+              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select product" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Products</SelectItem>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold break-all">
+              ₹{currentInventoryValue.toLocaleString("en-IN")}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {selectedProduct === "all" ? (
+                <>
+                  <TrendingDown className="h-3 w-3 inline mr-1" />
+                  -2% from last month
+                </>
+              ) : (
+                `Stock: ${products.find(p => p.id === selectedProduct)?.stock || 0} units`
+              )}
             </p>
           </CardContent>
         </Card>

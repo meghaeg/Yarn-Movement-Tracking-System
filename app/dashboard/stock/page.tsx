@@ -21,7 +21,7 @@ import { useInventory } from "@/hooks/use-inventory"
 import { useToast } from "@/hooks/use-toast"
 
 export default function StockPage() {
-  const { products, updateStock, stockMovements } = useInventory()
+  const { products, updateStock, stockMovements, loading, error } = useInventory()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -44,7 +44,7 @@ export default function StockPage() {
     setIsDialogOpen(true)
   }
 
-  const handleSubmitStockUpdate = () => {
+  const handleSubmitStockUpdate = async () => {
     if (!selectedProduct || !stockChange || !reason) return
 
     const quantity = Number.parseInt(stockChange)
@@ -59,17 +59,25 @@ export default function StockPage() {
 
     const finalQuantity = movementType === "add" ? quantity : -quantity
 
-    updateStock(selectedProduct.id, finalQuantity, reason)
+    try {
+      await updateStock(selectedProduct.id, finalQuantity, reason)
 
-    toast({
-      title: "Stock updated",
-      description: `${movementType === "add" ? "Added" : "Removed"} ${quantity} units ${movementType === "add" ? "to" : "from"} ${selectedProduct.name}`,
-    })
+      toast({
+        title: "Stock updated",
+        description: `${movementType === "add" ? "Added" : "Removed"} ${quantity} units ${movementType === "add" ? "to" : "from"} ${selectedProduct.name}`,
+      })
 
-    setIsDialogOpen(false)
-    setSelectedProduct(null)
-    setStockChange("")
-    setReason("")
+      setIsDialogOpen(false)
+      setSelectedProduct(null)
+      setStockChange("")
+      setReason("")
+    } catch (error) {
+      toast({
+        title: "Update failed",
+        description: "Failed to update stock. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const getStockStatus = (stock: number, minStock: number) => {
@@ -97,6 +105,20 @@ export default function StockPage() {
         </div>
       </div>
 
+      {/* Loading and Error States */}
+      {error && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-red-600">
+              <p>Error loading data: {error}</p>
+              <Button onClick={() => window.location.reload()} variant="outline" className="mt-2">
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Search */}
       <Card>
         <CardContent className="pt-6">
@@ -107,6 +129,7 @@ export default function StockPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
+              disabled={loading}
             />
           </div>
         </CardContent>

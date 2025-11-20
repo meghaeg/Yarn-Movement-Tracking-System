@@ -70,25 +70,33 @@ export default function CategoriesPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (editingCategory) {
-      // Update category logic would go here
+    try {
+      if (editingCategory) {
+        // Update category logic would go here
+        toast({
+          title: "Category Updated",
+          description: "Category has been updated successfully",
+        })
+      } else {
+        await addCategory(formData)
+        toast({
+          title: "Category Added",
+          description: "New category has been added successfully",
+        })
+      }
+
+      setIsCategoryDialogOpen(false)
+      setFormData({ name: "", description: "" })
+    } catch (error) {
       toast({
-        title: "Category Updated",
-        description: "Category has been updated successfully",
-      })
-    } else {
-      addCategory(formData)
-      toast({
-        title: "Category Added",
-        description: "New category has been added successfully",
+        title: "Error",
+        description: "Failed to save category. Please try again.",
+        variant: "destructive",
       })
     }
-
-    setIsCategoryDialogOpen(false)
-    setFormData({ name: "", description: "" })
   }
 
   if (!hasPermission("categories.manage")) {
@@ -144,7 +152,6 @@ export default function CategoriesPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Products Count</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -153,7 +160,6 @@ export default function CategoriesPage() {
                   <TableRow key={category.id}>
                     <TableCell className="font-medium">{category.name}</TableCell>
                     <TableCell className="max-w-xs truncate">{category.description || "No description"}</TableCell>
-                    <TableCell>12</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

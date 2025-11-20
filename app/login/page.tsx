@@ -53,7 +53,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-center mb-4">
             <Package className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl font-bold">{email ? email.split('@')[0] : 'Sign In'}</CardTitle>
           <CardDescription>Sign in to your inventory management account</CardDescription>
         </CardHeader>
         <CardContent>

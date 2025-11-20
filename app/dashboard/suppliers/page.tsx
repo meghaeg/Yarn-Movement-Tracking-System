@@ -75,25 +75,33 @@ export default function SuppliersPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (editingSupplier) {
-      // Update supplier logic would go here
+    try {
+      if (editingSupplier) {
+        // Update supplier logic would go here
+        toast({
+          title: "Supplier Updated",
+          description: "Supplier has been updated successfully",
+        })
+      } else {
+        await addSupplier(formData)
+        toast({
+          title: "Supplier Added",
+          description: "New supplier has been added successfully",
+        })
+      }
+
+      setIsSupplierDialogOpen(false)
+      setFormData({ name: "", email: "", phone: "", address: "" })
+    } catch (error) {
       toast({
-        title: "Supplier Updated",
-        description: "Supplier has been updated successfully",
-      })
-    } else {
-      addSupplier(formData)
-      toast({
-        title: "Supplier Added",
-        description: "New supplier has been added successfully",
+        title: "Error",
+        description: "Failed to save supplier. Please try again.",
+        variant: "destructive",
       })
     }
-
-    setIsSupplierDialogOpen(false)
-    setFormData({ name: "", email: "", phone: "", address: "" })
   }
 
   if (!hasPermission("suppliers.manage")) {
@@ -149,7 +157,6 @@ export default function SuppliersPage() {
                 <TableRow>
                   <TableHead>Supplier</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Products</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -183,7 +190,6 @@ export default function SuppliersPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>5 products</TableCell>
                     <TableCell>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                         Active
