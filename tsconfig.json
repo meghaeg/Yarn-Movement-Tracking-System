@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",   // ⭐ ADD THIS LINE
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "target": "ES6",
