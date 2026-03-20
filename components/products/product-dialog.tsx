@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useInventory } from "@/hooks/use-inventory"
 import { useToast } from "@/hooks/use-toast"
@@ -26,47 +25,39 @@ interface ProductDialogProps {
 }
 
 export function ProductDialog({ open, onOpenChange, product }: ProductDialogProps) {
-  const { categories, suppliers, addProduct, updateProduct } = useInventory()
+  const { suppliers, units, addProduct, updateProduct } = useInventory()
   const { toast } = useToast()
+
   const [formData, setFormData] = useState({
     name: "",
-    sku: "",
-    description: "",
-    categoryId: "",
     supplierId: "",
-    purchasePrice: "",
-    sellingPrice: "",
-    stock: "",
-    minStock: "",
-    expiryDate: "",
+    stock: "", // Used as Weight/KG
+    quality: "", // Used as Grade
+    assignedUnit: "",
+    deliveryDate: "",
+    salesPrice: "",
   })
 
   useEffect(() => {
     if (product) {
       setFormData({
         name: product.name || "",
-        sku: product.sku || "",
-        description: product.description || "",
-        categoryId: product.categoryId || "",
         supplierId: product.supplierId || "",
-        purchasePrice: product.purchasePrice?.toString() || "",
-        sellingPrice: product.sellingPrice?.toString() || "",
         stock: product.stock?.toString() || "",
-        minStock: product.minStock?.toString() || "",
-        expiryDate: product.expiryDate || "",
+        quality: product.quality || "",
+        assignedUnit: product.assignedUnit || "",
+        deliveryDate: product.deliveryDate || "",
+        salesPrice: product.salesPrice?.toString() || "",
       })
     } else {
       setFormData({
         name: "",
-        sku: "",
-        description: "",
-        categoryId: "",
         supplierId: "",
-        purchasePrice: "",
-        sellingPrice: "",
         stock: "",
-        minStock: "",
-        expiryDate: "",
+        quality: "",
+        assignedUnit: "",
+        deliveryDate: "",
+        salesPrice: "",
       })
     }
   }, [product, open])
@@ -75,24 +66,32 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
     e.preventDefault()
 
     const productData = {
-      ...formData,
-      purchasePrice: Number.parseFloat(formData.purchasePrice) || 0,
-      sellingPrice: Number.parseFloat(formData.sellingPrice) || 0,
+      name: formData.name,
+      supplierId: formData.supplierId,
       stock: Number.parseInt(formData.stock) || 0,
-      minStock: Number.parseInt(formData.minStock) || 0,
+      quality: formData.quality,
+      assignedUnit: formData.assignedUnit,
+      deliveryDate: formData.deliveryDate,
+      salesPrice: Number.parseFloat(formData.salesPrice) || 0,
+      // Default values for other required fields if any
+      sku: `TM-${Date.now()}`,
+      categoryId: "textile", // default
+      purchasePrice: 0,
+      sellingPrice: 0,
+      minStock: 0,
     }
 
     if (product) {
       updateProduct(product.id, productData)
       toast({
-        title: "Product updated",
-        description: "Product has been updated successfully.",
+        title: "Item updated",
+        description: "Queue item has been updated successfully.",
       })
     } else {
       addProduct(productData)
       toast({
-        title: "Product added",
-        description: "New product has been added successfully.",
+        title: "Added to Queue",
+        description: "New item has been added to the production queue.",
       })
     }
 
@@ -105,73 +104,62 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{product ? "Edit Product" : "Add New Product"}</DialogTitle>
+          <DialogTitle>{product ? "Edit Queue Item" : "Add to Production Queue"}</DialogTitle>
           <DialogDescription>
-            {product ? "Update product information" : "Enter product details to add to inventory"}
+            Enter the details for the textile production batch.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Product Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sku">SKU *</Label>
-              <Input
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => handleInputChange("sku", e.target.value)}
-                required
-              />
-            </div>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
-              rows={3}
+            <Label htmlFor="name">Thread Name *</Label>
+            <Input
+              id="name"
+              placeholder="e.g. 2/10s kw"
+              value={formData.name}
+              onChange={(e) => handleInputChange("name", e.target.value)}
+              required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select value={formData.categoryId} onValueChange={(value) => handleInputChange("categoryId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="supplier">Supplier</Label>
-              <Select value={formData.supplierId} onValueChange={(value) => handleInputChange("supplierId", value)}>
+              <Label htmlFor="supplier">Supplier *</Label>
+              <Select value={formData.supplierId} onValueChange={(value) => handleInputChange("supplierId", value)} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {suppliers.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
+                  {suppliers.length > 0 ? (
+                    suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-suppliers" disabled>No suppliers available</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignedUnit">Assign Unit *</Label>
+              <Select value={formData.assignedUnit} onValueChange={(value) => handleInputChange("assignedUnit", value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.length > 0 ? (
+                    units.map((u) => (
+                      <SelectItem key={u.id} value={u.unit}>
+                        {u.unit} ({u.status === 'running' ? 'Busy' : 'Idle'})
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-units" disabled>No units available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -179,67 +167,65 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="purchasePrice">Purchase Price</Label>
+              <Label htmlFor="stock">Weight/KG *</Label>
               <Input
-                id="purchasePrice"
+                id="stock"
                 type="number"
-                step="0.01"
-                value={formData.purchasePrice}
-                onChange={(e) => handleInputChange("purchasePrice", e.target.value)}
+                placeholder="0"
+                value={formData.stock}
+                onChange={(e) => handleInputChange("stock", e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sellingPrice">Selling Price *</Label>
-              <Input
-                id="sellingPrice"
-                type="number"
-                step="0.01"
-                value={formData.sellingPrice}
-                onChange={(e) => handleInputChange("sellingPrice", e.target.value)}
-                required
-              />
+              <Label htmlFor="quality">Grade *</Label>
+              <Select value={formData.quality} onValueChange={(value) => handleInputChange("quality", value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">Grade A</SelectItem>
+                  <SelectItem value="B">Grade B</SelectItem>
+                  <SelectItem value="C">Grade C</SelectItem>
+                  <SelectItem value="D">Grade D</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="stock">Current Stock</Label>
+              <Label htmlFor="salesPrice">Sales Amount (₹) *</Label>
               <Input
-                id="stock"
+                id="salesPrice"
                 type="number"
-                value={formData.stock}
-                onChange={(e) => handleInputChange("stock", e.target.value)}
+                placeholder="0"
+                value={formData.salesPrice}
+                onChange={(e) => handleInputChange("salesPrice", e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="minStock">Minimum Stock</Label>
+              <Label htmlFor="deliveryDate">Delivery Date</Label>
               <Input
-                id="minStock"
-                type="number"
-                value={formData.minStock}
-                onChange={(e) => handleInputChange("minStock", e.target.value)}
+                id="deliveryDate"
+                type="date"
+                value={formData.deliveryDate}
+                onChange={(e) => handleInputChange("deliveryDate", e.target.value)}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="expiryDate">Expiry Date (Optional)</Label>
-            <Input
-              id="expiryDate"
-              type="date"
-              value={formData.expiryDate}
-              onChange={(e) => handleInputChange("expiryDate", e.target.value)}
-            />
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">{product ? "Update Product" : "Add Product"}</Button>
+            <Button type="submit" className="bg-primary hover:bg-primary/90">
+              {product ? "Update Item" : "Add to Queue"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   )
 }

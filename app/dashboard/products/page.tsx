@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, AlertTriangle, Package } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, Package } from "lucide-react"
 import { useInventory } from "@/hooks/use-inventory"
 import { useAuth } from "@/components/providers/auth-provider"
 import { ProductDialog } from "@/components/products/product-dialog"
@@ -16,25 +16,22 @@ import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 
 export default function ProductsPage() {
-  const { products, categories, suppliers } = useInventory()
+  const { products, suppliers } = useInventory()
   const { hasPermission } = useAuth()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedSupplier, setSelectedSupplier] = useState("all")
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || product.categoryId === selectedCategory
+      product.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSupplier = selectedSupplier === "all" || product.supplierId === selectedSupplier
 
-    return matchesSearch && matchesCategory && matchesSupplier
+    return matchesSearch && matchesSupplier
   })
-
+  const queueProducts = filteredProducts.filter((p) => (p.processStatus ?? "pending") !== "done")
   const handleAddProduct = () => {
     if (hasPermission("products.add")) {
       setEditingProduct(null)
@@ -76,18 +73,18 @@ export default function ProductsPage() {
     }
   }
 
-  const getStockStatus = (stock: number, minStock: number) => {
-    if (stock === 0) return { label: "Out of Stock", variant: "destructive" as const }
-    if (stock <= minStock) return { label: "Low Stock", variant: "secondary" as const }
-    return { label: "In Stock", variant: "default" as const }
+  const getStatus = (product: any) => {
+    const status = product.processStatus ?? "pending"
+    if (status === "running") return { label: "Running", variant: "default" as const, className: "bg-[#1F5A63] text-white hover:bg-[#1A4A52]" }
+    return { label: "Yet to be Processed", variant: "secondary" as const, className: "bg-gray-100 text-gray-600" }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Products</h1>
-          <p className="text-muted-foreground">Manage your product inventory</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Queue</h1>
+          <p className="text-muted-foreground">Manage your production queue</p>
         </div>
         {hasPermission("products.add") && (
           <Button onClick={handleAddProduct}>
@@ -115,19 +112,6 @@ export default function ProductsPage() {
                 />
               </div>
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="All Suppliers" />
@@ -148,8 +132,8 @@ export default function ProductsPage() {
       {/* Products Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Products ({filteredProducts.length})</CardTitle>
-          <CardDescription>A list of all products in your inventory</CardDescription>
+          <CardTitle>Queue ({queueProducts.length})</CardTitle>
+          <CardDescription>Items waiting to be processed</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -157,20 +141,16 @@ export default function ProductsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[200px]">Product</TableHead>
-                  <TableHead className="min-w-[120px]">SKU</TableHead>
-                  <TableHead className="min-w-[100px]">Category</TableHead>
                   <TableHead className="min-w-[100px]">Supplier</TableHead>
-                  <TableHead className="min-w-[80px]">Stock</TableHead>
-                  <TableHead className="min-w-[100px]">Price</TableHead>
+                  <TableHead className="min-w-[80px]">Weight/KG</TableHead>
                   <TableHead className="min-w-[100px]">Status</TableHead>
                   <TableHead className="text-right min-w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => {
-                  const category = categories.find((c) => c.id === product.categoryId)
+                {queueProducts.map((product) => {
                   const supplier = suppliers.find((s) => s.id === product.supplierId)
-                  const stockStatus = getStockStatus(product.stock, product.minStock)
+                  const status = getStatus(product)
 
                   return (
                     <TableRow key={product.id}>
@@ -199,20 +179,16 @@ export default function ProductsPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-sm">{product.sku}</TableCell>
-                      <TableCell>{category?.name || "N/A"}</TableCell>
                       <TableCell>{supplier?.name || "N/A"}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <span className={product.stock <= product.minStock ? "text-red-600" : ""}>
+                          <span>
                             {product.stock}
                           </span>
-                          {product.stock <= product.minStock && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
                         </div>
                       </TableCell>
-                      <TableCell className="font-semibold">₹{product.sellingPrice.toLocaleString("en-IN")}</TableCell>
                       <TableCell>
-                        <Badge variant={stockStatus.variant}>{stockStatus.label}</Badge>
+                        <Badge variant={status.variant} className={status.className}>{status.label}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>

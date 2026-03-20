@@ -7,13 +7,14 @@ import { createContext, useContext, useState, useEffect } from "react"
 interface User {
   id: string
   email: string
-  role: "admin" | "manager" | "staff"
+  role: "admin" | "manager"
   name: string
+  unit?: string
 }
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string, role: "admin" | "manager" | "staff") => boolean
+  login: (email: string, password: string, role: "admin" | "manager") => Promise<boolean>
   logout: () => void
   hasPermission: (permission: string) => boolean
 }
@@ -37,22 +38,9 @@ const rolePermissions = {
     "categories.manage",
     "suppliers.manage",
     "settings.manage",
+    "units.view_history",
   ],
-  manager: [
-    "products.manage",
-    "products.view",
-    "products.add",
-    "products.edit",
-    "reports.view",
-    "reports.export",
-    "stock.manage",
-    "stock.view",
-    "orders.manage",
-    "orders.view",
-    "categories.manage",
-    "suppliers.manage",
-  ],
-  staff: ["products.view", "stock.manage", "stock.view", "orders.view"],
+  manager: ["products.view", "stock.manage", "stock.view", "orders.view"],
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -71,20 +59,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const login = (email: string, password: string, role: "admin" | "manager" | "staff") => {
-    // Simple demo authentication - in real app, this would be an API call
-    if (email && password) {
-      const newUser: User = {
-        id: Date.now().toString(),
-        email,
-        role,
-        name: email.split("@")[0] || "User",
-      }
-      setUser(newUser)
-      localStorage.setItem("user", JSON.stringify(newUser))
+  const login = async (email: string, password: string, role: "admin" | "manager") => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role }),
+      })
+      if (!res.ok) return false
+      const { user: loggedIn } = await res.json()
+      if (!loggedIn) return false
+      setUser(loggedIn)
+      localStorage.setItem("user", JSON.stringify(loggedIn))
       return true
+    } catch {
+      return false
     }
-    return false
   }
 
   const logout = () => {

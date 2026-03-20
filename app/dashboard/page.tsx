@@ -1,83 +1,175 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Package,
-  AlertTriangle,
-  ShoppingCart,
-  DollarSign,
   Plus,
   FileText,
-  Scan,
-  TrendingUp,
-  TrendingDown,
-  ChevronDown,
+  PauseCircle,
+  PlayCircle,
+  CheckCircle2,
+  Trash2,
 } from "lucide-react"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { useInventory } from "@/hooks/use-inventory"
+
 import { useAuth } from "@/components/providers/auth-provider"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { BarcodeScanner } from "@/components/barcode-scanner"
-
-const salesData = [
-  { name: "Jan", sales: 400000, purchases: 240000 },
-  { name: "Feb", sales: 300000, purchases: 139800 },
-  { name: "Mar", sales: 200000, purchases: 98000 },
-  { name: "Apr", sales: 278000, purchases: 390800 },
-  { name: "May", sales: 189000, purchases: 480000 },
-  { name: "Jun", sales: 239000, purchases: 380000 },
-]
-
-const categoryData = [
-  { name: "Electronics", value: 400, color: "#0088FE" },
-  { name: "Clothing", value: 300, color: "#00C49F" },
-  { name: "Food", value: 300, color: "#FFBB28" },
-  { name: "Books", value: 200, color: "#FF8042" },
-]
+import { useInventory } from "@/hooks/use-inventory"
+import { ProductDialog } from "@/components/products/product-dialog"
 
 export default function DashboardPage() {
-  const { products, orders } = useInventory()
   const { hasPermission } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const [isScannerOpen, setIsScannerOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<string>("all")
+  const {
+    products,
+    suppliers,
+    deleteProduct,
+    units,
+    updateUnit,
+    addCompletedJob,
+    loading
+  } = useInventory()
 
-  const totalProducts = products.length
-  const lowStockItems = products.filter((p) => p.stock <= p.minStock).length
-  const totalValue = products.reduce((sum, p) => sum + p.sellingPrice * p.stock, 0)
-  const totalOrders = orders.length
-  const totalRevenue = orders.filter(order => order.status === "completed").reduce((sum, order) => sum + order.totalAmount, 0)
-  
-  // Calculate inventory value for selected product
-  const getInventoryValue = () => {
-    if (selectedProduct === "all") {
-      return totalValue
-    }
-    const product = products.find(p => p.id === selectedProduct)
-    return product ? product.sellingPrice * product.stock : 0
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false)
+
+  const logActivity = async (action: string, unitId: string) => {
+    const unit = units.find(u => u.id === unitId)
+    try {
+      await fetch("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          unit: unit?.unit,
+          unitName: unit?.name,
+          weight: unit?.weight,
+          supplier: unit?.supplier,
+        }),
+      })
+    } catch {}
   }
-  
-  const currentInventoryValue = getInventoryValue()
 
-  const recentActivity = [
-    { id: 1, action: "Stock Added", product: "iPhone 14", quantity: 50, user: "John Doe", time: "2 hours ago" },
-    { id: 2, action: "Sale", product: "Samsung TV", quantity: 2, user: "Jane Smith", time: "4 hours ago" },
-    { id: 3, action: "Product Added", product: "MacBook Pro", quantity: 10, user: "Admin", time: "6 hours ago" },
-  ]
+  const handleStart = async (id: string) => {
+    const unit = units.find(u => u.id === id)
+    if (!unit) return
+
+    if (unit.name === "Ready") {
+      const nextItem = products[0]
+      if (!nextItem) {
+        toast({
+          title: "Queue Empty",
+          description: "There are no jobs in the queue to start. Add to queue first.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const supplierObj = suppliers.find(s => s.id === nextItem.supplierId || s.name === nextItem.supplierId)
+      const supplierName = supplierObj?.name || nextItem.supplierId || "Unknown"
+
+      try {
+        await updateUnit(id, {
+          status: "running",
+          name: nextItem.name,
+          supplier: supplierName,
+          weight: nextItem.stock,
+          grade: nextItem.quality || "A"
+        })
+        await deleteProduct(nextItem.id)
+        toast({
+          title: "Process Started",
+          description: `Loaded "${nextItem.name}" from queue into ${unit.unit}`,
+        })
+        await logActivity("start", id)
+      } catch (err) {
+        toast({ title: "Error", description: "Failed to start unit", variant: "destructive" })
+      }
+      return
+    }
+
+    await updateUnit(id, { status: "running" })
+    await logActivity("resume", id)
+  }
+
+  const handleStop = async (id: string) => {
+    await updateUnit(id, { status: "stopped" })
+    await logActivity("stop", id)
+    toast({ title: "Unit Stopped", description: "Production has been paused." })
+  }
+
+  const handleComplete = async (id: string) => {
+    const unit = units.find(u => u.id === id)
+    if (!unit || unit.name === "Ready") return
+
+    const shortage = 0.5
+    try {
+      const job = await addCompletedJob({
+        name: unit.name,
+        supplier: unit.supplier,
+        weight: unit.weight,
+        shortage: shortage,
+        returnWeight: unit.weight - shortage,
+      })
+
+      // Prompt for Sales value and persist
+      const input = typeof window !== "undefined" ? window.prompt("Enter Sales value for this job (numbers only)") : null
+      const salesValue = input ? Number.parseFloat(input) : undefined
+      if (typeof salesValue === "number" && !Number.isNaN(salesValue)) {
+        try {
+          await fetch("/api/sales", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              unit: unit.unit,
+              value: salesValue,
+              jobId: job?.id,
+              name: unit.name,
+              supplier: unit.supplier,
+              weight: unit.weight,
+            }),
+          })
+        } catch {}
+      }
+
+      await updateUnit(id, {
+        status: "stopped",
+        name: "Ready",
+        supplier: "-",
+        weight: 0,
+        grade: "-"
+      })
+
+      await logActivity("done", id)
+      toast({
+        title: "Job Completed",
+        description: `History updated. ${unit.unit} is now Ready.`,
+      })
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to process completion", variant: "destructive" })
+    }
+  }
+
+  const handleDeleteSubJob = async (id: string) => {
+    await updateUnit(id, {
+      status: "stopped",
+      name: "Ready",
+      supplier: "-",
+      weight: 0,
+      grade: "-"
+    })
+    toast({ title: "Unit Cleared", description: "Current job removed from unit." })
+  }
 
   const handleAddProduct = () => {
     if (hasPermission("products.add")) {
-      router.push("/dashboard/products")
+      setIsProductDialogOpen(true)
     } else {
       toast({
         title: "Access Denied",
-        description: "You don't have permission to add products",
+        description: "You don't have permission to add to queue",
         variant: "destructive",
       })
     }
@@ -95,259 +187,87 @@ export default function DashboardPage() {
     }
   }
 
-  const handleScanBarcode = () => {
-    if (hasPermission("stock.manage")) {
-      setIsScannerOpen(true)
-    } else {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to scan barcodes",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleProductFound = (product: any) => {
-    toast({
-      title: "Product Found",
-      description: `${product.name} - Stock: ${product.stock} units`,
-    })
-    // You can add more logic here, like navigating to product details
+  if (loading && units.length === 0) {
+    return <div className="p-8 text-center text-muted-foreground">Loading production data...</div>
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
-        <div className="flex flex-wrap gap-2">
-          {hasPermission("products.add") && (
-            <Button onClick={handleAddProduct} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          )}
-          {hasPermission("reports.view") && (
-            <Button variant="outline" onClick={handleGenerateReport} size="sm">
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Report
-            </Button>
-          )}
-          {hasPermission("stock.manage") && (
-            <Button variant="outline" onClick={handleScanBarcode} size="sm">
-              <Scan className="h-4 w-4 mr-2" />
-              Scan Barcode
-            </Button>
-          )}
+        <div className="flex flex-col items-start gap-1">
+          <h1 className="text-4xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-muted-foreground text-lg">All units status and overview</p>
         </div>
+        {hasPermission("products.manage") && (
+          <Button onClick={() => setIsProductDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Product
+          </Button>
+        )}
       </div>
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{totalProducts}</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +12% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Alerts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-yellow-600">{lowStockItems}</div>
-            <p className="text-xs text-muted-foreground">Items need restocking</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{totalOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +8% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold break-all">
-              ₹{totalRevenue.toLocaleString("en-IN")}
+      <Card className="border-none shadow-sm overflow-hidden">
+        <CardHeader className="bg-white border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="text-xl font-semibold">Units Status</CardTitle>
+              <CardDescription className="text-gray-500">UNIT1, UNIT2, UNIT3 current processing</CardDescription>
             </div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +15% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="mb-3">
-              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Products</SelectItem>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleGenerateReport} size="sm">
+                <FileText className="h-4 w-4 mr-2" />
+                Report
+              </Button>
             </div>
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold break-all">
-              ₹{currentInventoryValue.toLocaleString("en-IN")}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {selectedProduct === "all" ? (
-                <>
-                  <TrendingDown className="h-3 w-3 inline mr-1" />
-                  -2% from last month
-                </>
-              ) : (
-                `Stock: ${products.find(p => p.id === selectedProduct)?.stock || 0} units`
-              )}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {units.map((unit) => {
+              const supplierObj = suppliers.find(s => s.id === unit.supplier || s.name === unit.supplier)
+              const displaySupplier = supplierObj?.name || unit.supplier
+              const etaMin = unit.status === 'running' && unit.weight > 0 ? Math.ceil(unit.weight * 2) : 0
 
-      {/* Charts - Only show if user has permission */}
-      {hasPermission("reports.view") && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sales vs Purchases</CardTitle>
-              <CardDescription>Monthly comparison of sales and purchases</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`} />
-                  <Tooltip formatter={(value) => [`₹${value.toLocaleString("en-IN")}`, ""]} />
-                  <Bar dataKey="sales" fill="#8884d8" />
-                  <Bar dataKey="purchases" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Categories</CardTitle>
-              <CardDescription>Distribution of products by category</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Recent Activity & Low Stock Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest inventory movements</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {activity.product} - Qty: {activity.quantity}
-                    </p>
-                    <p className="text-xs text-muted-foreground">by {activity.user}</p>
-                  </div>
-                  <div className="text-xs text-muted-foreground ml-2 flex-shrink-0">{activity.time}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Low Stock Alerts</CardTitle>
-            <CardDescription>Products that need restocking</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {products
-                .filter((p) => p.stock <= p.minStock)
-                .slice(0, 5)
-                .map((product) => (
-                  <div
-                    key={product.id}
-                    className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
+              return (
+                <Card key={unit.id} className="border border-gray-100 shadow-none">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base font-semibold">{unit.unit}</CardTitle>
+                      {unit.status === "running" ? (
+                        <Badge className="bg-[#1F5A63] text-white hover:bg-[#1A4A52]">Running</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-gray-100 text-gray-500">Stopped</Badge>
+                      )}
                     </div>
-                    <div className="text-right ml-2 flex-shrink-0">
-                      <Badge variant="destructive">{product.stock} left</Badge>
-                      <p className="text-xs text-muted-foreground mt-1">Min: {product.minStock}</p>
+                    <CardDescription>Yarn in process</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="text-sm text-gray-600">Yarn</div>
+                    <div className="font-medium text-gray-900">{unit.name}</div>
+                    <div className="text-sm text-gray-600 mt-2">Supplier</div>
+                    <div className="text-gray-900">{displaySupplier}</div>
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div>
+                        <div className="text-xs text-gray-500">Weight</div>
+                        <div className="font-semibold">{unit.weight} KG</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Grade</div>
+                        <div className="font-semibold">{unit.grade}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">ETA</div>
+                        <div className="font-semibold">{etaMin > 0 ? `${etaMin} mins` : "—"}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Barcode Scanner */}
-      <BarcodeScanner open={isScannerOpen} onOpenChange={setIsScannerOpen} onProductFound={handleProductFound} />
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
+
   )
 }

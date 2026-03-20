@@ -19,15 +19,15 @@ export default function SettingsPage() {
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
   const [settings, setSettings] = useState({
-    companyName: "My Inventory Company",
-    companyEmail: "admin@company.com",
-    companyPhone: "+91 9876543210",
-    companyAddress: "123 Business Street, Mumbai, India",
+    companyName: "Sree Airson Textile Mills",
+    companyEmail: "contact@sreeairson.com",
+    companyPhone: "+91 63829 45210",
+    companyAddress: "Textile Valley, Coimbatore, Tamil Nadu",
     currency: "INR",
     timezone: "Asia/Kolkata",
-    lowStockThreshold: 10,
+    efficiencyTarget: 95,
     emailNotifications: true,
-    smsNotifications: false,
+    smsNotifications: true,
     autoBackup: true,
     backupFrequency: "daily",
   })
@@ -153,12 +153,12 @@ export default function SettingsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lowStockThreshold">Low Stock Threshold</Label>
+                  <Label htmlFor="efficiencyTarget">Production Efficiency Target (%)</Label>
                   <Input
-                    id="lowStockThreshold"
+                    id="efficiencyTarget"
                     type="number"
-                    value={settings.lowStockThreshold}
-                    onChange={(e) => handleSettingChange("lowStockThreshold", Number.parseInt(e.target.value))}
+                    value={settings.efficiencyTarget}
+                    onChange={(e) => handleSettingChange("efficiencyTarget", Number.parseInt(e.target.value))}
                   />
                 </div>
               </div>

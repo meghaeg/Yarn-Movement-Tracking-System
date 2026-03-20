@@ -4,74 +4,74 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: #FFFFFF;
+  --foreground: #1F2933;
+  --card: #FFFFFF;
+  --card-foreground: #1F2933;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F2933;
+  --primary: #1F5A63;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E7EFF1;
+  --secondary-foreground: #1F2933;
+  --muted: #F4F7F8;
+  --muted-foreground: #55656F;
+  --accent: #DCE9ED;
+  --accent-foreground: #1F2933;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #C6D5DA;
+  --input: #EEF3F5;
+  --ring: #2A6B7B;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1F2933;
+  --sidebar-primary: #1F5A63;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E7EFF1;
+  --sidebar-accent-foreground: #1F2933;
+  --sidebar-border: #C6D5DA;
+  --sidebar-ring: #2A6B7B;
 }
 
 .dark {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: #FFFFFF;
+  --foreground: #1F2933;
+  --card: #FFFFFF;
+  --card-foreground: #1F2933;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F2933;
+  --primary: #1F5A63;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E7EFF1;
+  --secondary-foreground: #1F2933;
+  --muted: #F4F7F8;
+  --muted-foreground: #55656F;
+  --accent: #DCE9ED;
+  --accent-foreground: #1F2933;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #C6D5DA;
+  --input: #EEF3F5;
+  --ring: #2A6B7B;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1F2933;
+  --sidebar-primary: #1F5A63;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E7EFF1;
+  --sidebar-accent-foreground: #1F2933;
+  --sidebar-border: #C6D5DA;
+  --sidebar-ring: #2A6B7B;
 }
 
 @theme inline {
@@ -145,4 +145,60 @@
   .dark [data-radix-collection-item] {
     @apply bg-gray-800 border-gray-700;
   }
+
+  /* Dialog portal renders at body level, outside layout */
+  [data-slot="dialog-portal-outside"] {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  [data-slot="dialog-portal-outside"] > * {
+    pointer-events: auto;
+  }
+}
+
+@layer utilities {
+  .bg-violet-50 { background-color: #f3f8fa !important; }
+  .bg-violet-100 { background-color: #e5eff2 !important; }
+  .bg-violet-200 { background-color: #cfdee4 !important; }
+  .bg-violet-300 { background-color: #aec5cf !important; }
+  .bg-violet-400 { background-color: #4f7d8d !important; }
+  .bg-violet-500 { background-color: #3f6d7d !important; }
+  .bg-violet-600 { background-color: #325968 !important; }
+  .bg-violet-800 { background-color: #1f3f4c !important; }
+
+  .text-violet-500 { color: #4f7d8d !important; }
+  .text-violet-600 { color: #3f6d7d !important; }
+  .text-violet-700 { color: #325968 !important; }
+  .text-violet-800 { color: #264955 !important; }
+  .text-violet-900 { color: #1f3f4c !important; }
+
+  .border-violet-100 { border-color: #dbe6ea !important; }
+  .border-violet-200 { border-color: #c6d5da !important; }
+  .border-violet-300 { border-color: #aec5cf !important; }
+  .border-violet-400 { border-color: #6e95a3 !important; }
+  .border-violet-500 { border-color: #4f7d8d !important; }
+
+  .divide-violet-100 > :not([hidden]) ~ :not([hidden]) { border-color: #dbe6ea !important; }
+
+  .from-violet-50 {
+    --tw-gradient-from: #f3f8fa var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgb(243 248 250 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+  .from-violet-100 {
+    --tw-gradient-from: #e5eff2 var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgb(229 239 242 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+  .to-violet-50 { --tw-gradient-to: #f3f8fa var(--tw-gradient-to-position) !important; }
+
+  .hover\:bg-violet-50:hover { background-color: #edf5f7 !important; }
+  .hover\:bg-violet-300:hover { background-color: #9cb8c3 !important; }
+  .hover\:bg-violet-500:hover { background-color: #325968 !important; }
+  .hover\:bg-violet-600:hover { background-color: #284a57 !important; }
 }

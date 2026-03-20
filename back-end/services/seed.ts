@@ -10,39 +10,82 @@ export async function runSeed() {
 	const stock = db.collection("stock_movements");
 	const settings = db.collection("settings");
 
+	// Seed Textile Categories
 	if ((await categories.estimatedDocumentCount()) === 0) {
 		await categories.insertMany([
-			{ name: "Beverages" },
-			{ name: "Snacks" },
-			{ name: "Stationery" },
+			{ name: "Cotton Threads", description: "Natural cotton threads for various textile applications" },
+			{ name: "Polyester Threads", description: "Synthetic polyester threads for durability and strength" },
+			{ name: "Silk Threads", description: "Premium silk threads for luxury textiles" },
+			{ name: "Nylon Threads", description: "Strong nylon threads for industrial applications" },
+			{ name: "Fabrics", description: "Various fabric materials and textiles" },
+			{ name: "Accessories", description: "Buttons, zippers, and other textile accessories" },
 		]);
 	}
 
 	const categoryDocs = await categories.find().toArray();
-	const beveragesId = categoryDocs.find(c => c.name === "Beverages")?._id;
-	const snacksId = categoryDocs.find(c => c.name === "Snacks")?._id;
+	const cottonThreadsId = categoryDocs.find(c => c.name === "Cotton Threads")?._id;
+	const polyesterThreadsId = categoryDocs.find(c => c.name === "Polyester Threads")?._id;
+	const fabricsId = categoryDocs.find(c => c.name === "Fabrics")?._id;
 
+	// Seed Textile Suppliers
 	if ((await suppliers.estimatedDocumentCount()) === 0) {
 		await suppliers.insertMany([
-			{ name: "Acme Supplies", contactEmail: "sales@acme.test" },
-			{ name: "Global Traders", contactEmail: "info@global.test" },
+			{ name: "Premium Thread Mills", contactEmail: "sales@premiumthreads.com", phone: "+91-9876543210", address: "Coimbatore, Tamil Nadu" },
+			{ name: "Global Textiles Ltd", contactEmail: "orders@globaltextiles.com", phone: "+91-9876543211", address: "Tirupur, Tamil Nadu" },
+			{ name: "Indian Cotton Suppliers", contactEmail: "supply@indiancotton.com", phone: "+91-9876543212", address: "Erode, Tamil Nadu" },
 		]);
 	}
 
 	const supplierDocs = await suppliers.find().toArray();
-	const acmeId = supplierDocs.find(s => s.name === "Acme Supplies")?._id;
+	const premiumThreadsId = supplierDocs.find(s => s.name === "Premium Thread Mills")?._id;
+	const globalTextilesId = supplierDocs.find(s => s.name === "Global Textiles Ltd")?._id;
 
+	// Seed Textile Products
 	if ((await products.estimatedDocumentCount()) === 0) {
 		await products.insertMany([
-			{ name: "Cola 330ml", sku: "COLA-330", price: 1.25, stock: 120, categoryId: beveragesId, supplierId: acmeId },
-			{ name: "Potato Chips 70g", sku: "CHIP-070", price: 0.99, stock: 80, categoryId: snacksId, supplierId: acmeId },
+			{
+				name: "Cotton Thread 40s",
+				sku: "CTN-40S-001",
+				price: 85,
+				stock: 500,
+				categoryId: cottonThreadsId,
+				supplierId: premiumThreadsId,
+				description: "High quality 40s count cotton thread, perfect for garment stitching",
+				quality: "A Grade",
+				count: "40s",
+				color: "White"
+			},
+			{
+				name: "Polyester Thread 36s",
+				sku: "PLY-36S-002",
+				price: 65,
+				stock: 350,
+				categoryId: polyesterThreadsId,
+				supplierId: globalTextilesId,
+				description: "Durable 36s polyester thread for industrial use",
+				quality: "Premium",
+				count: "36s",
+				color: "Black"
+			},
+			{
+				name: "Cotton Fabric - Plain",
+				sku: "FAB-CTN-003",
+				price: 120,
+				stock: 200,
+				categoryId: fabricsId,
+				supplierId: premiumThreadsId,
+				description: "100% cotton plain fabric, 60 inches width",
+				quality: "Export Quality",
+				width: "60 inches",
+				gsm: "150"
+			},
 		]);
 	}
 
+	// Seed Users (Admin and Staff only)
 	if ((await users.estimatedDocumentCount()) === 0) {
 		await users.insertMany([
 			{ name: "Admin User", email: "admin@example.com", role: "admin" },
-			{ name: "Manager User", email: "manager@example.com", role: "manager" },
 			{ name: "Staff User", email: "staff@example.com", role: "staff" },
 		]);
 	}
